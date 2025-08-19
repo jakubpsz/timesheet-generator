@@ -1,0 +1,8 @@
+
+/* Mobile-first, Cigna-inspired clean layout (without copying brand assets). */
+:root { --brand: #0047a3; }
+.hero {
+  background: linear-gradient(180deg, rgba(0,71,163,0.08), rgba(0,71,163,0.00));
+}
+.navbar-brand { color: var(--brand); }
+.task-row .pct { max-width: 120px; }
