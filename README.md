@@ -9,6 +9,11 @@ export FLASK_APP=run:app
 flask run --host=0.0.0.0 --port=80
 ```
 
+## How to run test
+```bash
+python -m pytest --cov=app --cov-report=html
+```
+
 ## Configuration
 Defaults are in `config.ini` (available_days, hours_per_day). Env vars `AVAILABLE_DAYS` and `HOURS_PER_DAY` override.
 
@@ -17,7 +22,7 @@ Defaults are in `config.ini` (available_days, hours_per_day). Env vars `AVAILABL
 - `app/config.py` – INI loader
 - `app/services/` – business logic (e.g., `scheduler.py`)
 - `app/main/` – blueprint (`routes.py`, templates, static)
-- `wsgi.py` – production entrypoint
+- `run.py` – production entrypoint
 - `tests/` – unit and integration tests
 - `requirements.txt` – dependencies
 
@@ -28,3 +33,4 @@ app/main/templates/htm/ (Jinja templates)
 app/main/static/css/styles.css
 app/main/static/js/main.js
 ```
+
