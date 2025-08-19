@@ -59,6 +59,9 @@ def _parse_form(form) -> tuple[list[str], list[float], int, int, list[str]]:
         if len(tasks) != len(percentages):
             errors.append("Each task must have a matching percentage.")
         else:
+            # Check for duplicate tasks
+            if len(set(tasks)) != len(tasks):
+                errors.append("A task was selected more than once.")
             total = sum(percentages)
             if abs(total - 100.0) > 1e-6:
                 errors.append("Percentages must sum to 100.")
@@ -121,12 +124,14 @@ def index():
                 for t, row, th in zip(tasks, schedule, task_hours)
             ]
 
+            grand_total = round(sum(task_hours), 2)
             result = {
                 "days": days,                   # [1, 2, ..., available_days]
                 "rows": rows,                   # list of {task, cells: [h...], total}
                 "tasks": tasks,
                 "available_days": available_days,
                 "hours_per_day": hours_per_day,
+                "grand_total": grand_total,
             }
 
     return render_template("index.html", defaults=defaults, errors=errors, result=result, form_rows=form_rows, task_options=task_options)
