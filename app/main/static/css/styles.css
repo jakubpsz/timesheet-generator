@@ -6,3 +6,30 @@
 }
 .navbar-brand { color: var(--brand); }
 .task-row .pct { max-width: 120px; }
+
+/* Autocomplete dropdown */
+.task-autocomplete { position: relative; }
+.task-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1050;
+  background: #fff;
+  border: 1px solid #ced4da;
+  border-top: none;
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
+  border-bottom-left-radius: .375rem;
+  border-bottom-right-radius: .375rem;
+}
+.task-suggestion-item {
+  padding: .5rem .75rem;
+  cursor: pointer;
+}
+.task-suggestion-item:hover,
+.task-suggestion-item.active {
+  background-color: #f8f9fa;
+}
+.d-none { display: none !important; }
