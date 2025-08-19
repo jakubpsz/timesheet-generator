@@ -168,12 +168,23 @@ function setupAutocomplete(container) {
 
   function filter() {
     const q = (input.value || '').toLowerCase();
-    filtered = options.filter(o => o.toLowerCase().includes(q)).slice(0, 50);
+    // Exclude tasks already selected in other rows
+    const selected = new Set(
+      Array.from(document.querySelectorAll('.task-autocomplete input.task-input'))
+        .filter(el => el !== input)
+        .map(el => (el.value || '').trim())
+        .filter(v => v !== '')
+    );
+    filtered = options
+      .filter(o => !selected.has(o))
+      .filter(o => o.toLowerCase().includes(q))
+      .slice(0, 50);
     activeIndex = -1;
     render();
   }
 
   input.addEventListener('input', filter);
+  input.addEventListener('change', filter);
   input.addEventListener('focus', () => {
     clearTimeout(hideTimeout);
     filter();

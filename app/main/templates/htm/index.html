@@ -47,10 +47,10 @@
         <hr class="my-4">
         <h3 class="h5 mb-3">Results</h3>
         <div class="table-responsive">
-          <table class="table table-bordered align-middle">
+          <table class="table table-bordered table-striped table-hover align-middle results-table">
             <thead>
-              <tr>
-                <th>Task</th>
+              <tr class="results-header">
+                <th class="first-col">Task</th>
                 {% for d in result.days %}
                   <th>Day {{ d }}</th>
                 {% endfor %}
@@ -60,12 +60,18 @@
             <tbody>
               {% for r in result.rows %}
                 <tr>
-                  <td>{{ r.task }}</td>
+                  <td class="first-col">{{ r.task }}</td>
                   {% for cell in r.cells %}<td>{{ '%.2f'|format(cell) }}</td>{% endfor %}
                   <td>{{ '%.2f'|format(r.total) }}</td>
                 </tr>
               {% endfor %}
             </tbody>
+            <tfoot>
+              <tr class="results-footer">
+                <td colspan="{{ 1 + result.days|length }}" class="text-end fw-semibold">Total</td>
+                <td class="fw-bold">{{ '%.2f'|format(result.grand_total) }}</td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       {% endif %}
