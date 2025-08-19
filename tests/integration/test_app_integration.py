@@ -93,3 +93,46 @@ def test_env_overrides_defaults_integration(monkeypatch):
         html = rv.data.decode()
         assert 'name="available_days"' in html and 'value="7"' in html
         assert 'name="hours_per_day"' in html and 'value="9"' in html
+
+
+def test_task_options_when_file_missing(monkeypatch, tmp_path):
+    # Simulate missing resources/tasks.csv to cover the 'file not exists' branch
+    import app.main.routes as routes
+    monkeypatch.setattr(routes, "BASE_DIR", tmp_path)
+
+    app = create_app({"TESTING": True})
+    with app.test_client() as client:
+        rv = client.get("/")
+        assert rv.status_code == 200
+        html = rv.data.decode()
+        assert 'data-options' in html
+        # With missing file, options JSON should be an empty list
+        assert "[]" in html
+        # And no known code from the default resources should be present
+        assert '05882' not in html
+
+
+def test_task_options_exception_during_read(monkeypatch, tmp_path):
+    # Create the path so exists() is True, then force an exception on opening
+    import app.main.routes as routes
+    import pathlib
+
+    res_dir = tmp_path / "resources"
+    res_dir.mkdir()
+    (res_dir / "tasks.csv").write_text("123\n", encoding="utf-8")
+
+    monkeypatch.setattr(routes, "BASE_DIR", tmp_path)
+
+    def boom(self, *args, **kwargs):
+        raise OSError("boom")
+
+    monkeypatch.setattr(pathlib.Path, "open", boom, raising=True)
+
+    app = create_app({"TESTING": True})
+    with app.test_client() as client:
+        rv = client.get("/")
+        assert rv.status_code == 200
+        html = rv.data.decode()
+        # Exception should be handled gracefully; options should be empty
+        assert 'data-options' in html
+        assert "[]" in html
