@@ -7,6 +7,19 @@ from __future__ import annotations
 from flask import current_app, render_template, request
 from . import bp
 from ..services.scheduler import compute_schedule
+from ..config import BASE_DIR
+
+
+def _load_task_options() -> list[str]:
+    """Load task suggestions from resources/tasks.csv if present."""
+    try:
+        path = BASE_DIR / "resources" / "tasks.csv"
+        if not path.exists():
+            return []
+        with path.open("r", encoding="utf-8") as f:
+            return [line.strip() for line in f if line.strip()]
+    except Exception:
+        return []
 
 
 def _parse_form(form) -> tuple[list[str], list[float], int, int, list[str]]:
@@ -39,12 +52,16 @@ def _parse_form(form) -> tuple[list[str], list[float], int, int, list[str]]:
     hours_per_day = int(form.get("hours_per_day", current_app.config.get("HOURS_PER_DAY", 8)))
 
     # Validations
-    if len(tasks) != len(percentages):
-        errors.append("Each task must have a matching percentage.")
-
-    total = sum(percentages)
-    if abs(total - 100.0) > 1e-6:
-        errors.append("Percentages must sum to 100.")
+    has_empty_task = any((t or "").strip() == "" for t in raw_tasks)
+    if has_empty_task:
+        errors.append("Please fill all tasks names")
+    else:
+        if len(tasks) != len(percentages):
+            errors.append("Each task must have a matching percentage.")
+        else:
+            total = sum(percentages)
+            if abs(total - 100.0) > 1e-6:
+                errors.append("Percentages must sum to 100.")
 
     if available_days <= 0:
         errors.append("Available days must be a positive integer.")
@@ -60,6 +77,8 @@ def index():
     """Home page with the schedule form and results."""
     result = None
     errors: list[str] = []
+
+    task_options = _load_task_options()
 
     defaults = {
         "available_days": current_app.config.get("AVAILABLE_DAYS", 5),
@@ -110,4 +129,4 @@ def index():
                 "hours_per_day": hours_per_day,
             }
 
-    return render_template("index.html", defaults=defaults, errors=errors, result=result, form_rows=form_rows)
+    return render_template("index.html", defaults=defaults, errors=errors, result=result, form_rows=form_rows, task_options=task_options)
