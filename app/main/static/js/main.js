@@ -17,9 +17,10 @@ function addRow() {
   tasks.appendChild(div);
   attachPctHandlers();
   setupAutocomplete(div.querySelector('.task-autocomplete'));
-  // Evenly distribute after adding a row
+  // Distribute remaining percentage to the new row (and other unlocked rows)
   rebalancePercentages();
 }
+
 function removeRow(btn) {
   btn.closest('.task-row').remove();
   rebalancePercentages();
@@ -33,90 +34,72 @@ function round2(x) {
   return Math.round((Number(x) + Number.EPSILON) * 100) / 100;
 }
 
-function rebalancePercentages(changedIndex = null) {
+function rebalancePercentages() {
   const inputs = getPctInputs();
   const n = inputs.length;
   if (n === 0) return;
 
-  // If no manual change triggered, evenly distribute to 100 with rounding fix
-  if (changedIndex === null) {
-    const even = 100 / n;
-    let acc = 0;
-    for (let i = 0; i < n - 1; i++) {
-      const v = round2(even);
-      inputs[i].value = v.toFixed(2);
-      acc += v;
+  let lockedSum = 0;
+  const unlockedInputs = [];
+
+  // Identify locked vs unlocked inputs
+  inputs.forEach(inp => {
+    // Treat as locked if the user has manually edited it (dataset.locked)
+    if (inp.dataset.locked === 'true') {
+      const val = parseFloat(inp.value);
+      lockedSum += (isNaN(val) ? 0 : val);
+    } else {
+      unlockedInputs.push(inp);
     }
-    const last = round2(100 - acc);
-    inputs[n - 1].value = last.toFixed(2);
-    return;
+  });
+
+  const m = unlockedInputs.length;
+  if (m === 0) return; // No unlocked inputs to balance
+
+  // Calculate remainder to be distributed among unlocked inputs
+  // We allow lockedSum to exceed 100 (user error preserved), in which case remainder is 0.
+  const remainder = Math.max(0, 100 - lockedSum);
+
+  // Distribute remainder evenly among unlocked inputs
+  const even = remainder / m;
+  let acc = 0;
+
+  for (let i = 0; i < m - 1; i++) {
+    const v = round2(even);
+    unlockedInputs[i].value = v.toFixed(2);
+    acc += v;
   }
-
-  // With a changed index, clamp so total stays at 100
-  const changed = inputs[changedIndex];
-  // Sum of rows above the changed one (they remain unchanged)
-  let sumAbove = 0;
-  for (let i = 0; i < changedIndex; i++) {
-    sumAbove += parseFloat(inputs[i].value || '0') || 0;
-  }
-  let v = parseFloat(changed.value || '0');
-  if (isNaN(v)) v = 0;
-  // Clamp to [0, 100 - sumAbove]
-  const maxAllowed = Math.max(0, 100 - sumAbove);
-  v = Math.max(0, Math.min(maxAllowed, v));
-  v = round2(v);
-  changed.value = v.toFixed(2);
-
-  const remainderTotal = round2(100 - (sumAbove + v));
-  const remainder = Math.max(0, remainderTotal);
-
-  // Recalculate only tasks BELOW the changed one
-  const below = inputs.slice(changedIndex + 1);
-  const m = below.length;
-  if (m === 0) return;
-
-  const currentSumBelow = below.reduce((s, el) => s + (parseFloat(el.value || '0') || 0), 0);
-  if (currentSumBelow <= 0.000001) {
-    // Spread remainder evenly with rounding fix on last
-    const even = remainder / m;
-    let acc = 0;
-    for (let i = 0; i < m - 1; i++) {
-      const val = round2(even);
-      below[i].value = val.toFixed(2);
-      acc += val;
-    }
-    const last = round2(remainder - acc);
-    below[m - 1].value = last.toFixed(2);
-  } else {
-    // Scale proportionally to fit remainder, fix rounding on last
-    let acc = 0;
-    for (let i = 0; i < m - 1; i++) {
-      const cur = parseFloat(below[i].value || '0') || 0;
-      const scaled = round2(remainder * (cur / currentSumBelow));
-      below[i].value = scaled.toFixed(2);
-      acc += scaled;
-    }
-    const last = round2(remainder - acc);
-    below[m - 1].value = last.toFixed(2);
-  }
+  // Assign the rest to the last unlocked input to handle rounding errors
+  const last = round2(remainder - acc);
+  unlockedInputs[m - 1].value = last.toFixed(2);
 }
 
 function attachPctHandlers() {
-  // Evenly distribute on initial load if all blank
   const inputs = getPctInputs();
-  if (inputs.length > 0 && inputs.every(inp => (inp.value ?? '') === '' || parseFloat(inp.value) === 0)) {
-    rebalancePercentages();
-  }
 
   inputs.forEach((inp) => {
     if (inp.dataset.listenerAttached === 'true') return;
-    // Rebalance after editing is finished (on change/blur), not on every keystroke
+
+    // If the input already has a value (e.g. from server), mark it as locked
+    if (inp.value !== '') {
+      inp.dataset.locked = 'true';
+    }
+
     const handler = () => {
-      const curIdx = getPctInputs().indexOf(inp);
-      rebalancePercentages(curIdx);
+      // If user clears the value, unlock it. If they enter a value, lock it.
+      if (inp.value === '') {
+        delete inp.dataset.locked;
+      } else {
+        inp.dataset.locked = 'true';
+      }
+      rebalancePercentages();
     };
+
+    // Use 'change' to capture final edits. 
     inp.addEventListener('change', handler);
+    // Also handle blur just in case
     inp.addEventListener('blur', handler);
+
     inp.dataset.listenerAttached = 'true';
   });
 }
